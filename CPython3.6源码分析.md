@@ -195,9 +195,75 @@ typedef struct {
 正因为 PyTypeObject 中同时定义了三种函数簇，所以才可以实现鸭子类型。
 
 
+#### PyType_Type
+前面说过，PyVarObject -> PyObject -> PyTypeObject，但 PyTypeObject 内部又存在 PyVarObject。那么，这个内部的 VarObject 的 type 又是什么？此处先来看下
+![avatar](.img/对象类型类型对象_1526094417_19384.png)
+
+    a = int(10) == 整型对象
+    a.ob_type == PyLong_Type
+    PyLong_Type.ob_type == PyType_Type
+    PyType_Type.ob_type == PyType_Type
 
 
 
+```c
+
+// Include/object.h 82
+/* PyObject_HEAD defines the initial segment of every PyObject. */
+#define PyObject_HEAD                   PyObject ob_base;
+
+#define PyObject_HEAD_INIT(type)        \
+    { _PyObject_EXTRA_INIT              \
+    1, type },
+
+#define PyVarObject_HEAD_INIT(type, size)       \
+    { PyObject_HEAD_INIT(type) size },
+```
+```c
+PyTypeObject PyType_Type = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "type",                                     /* tp_name */
+    sizeof(PyHeapTypeObject),                   /* tp_basicsize */
+    sizeof(PyMemberDef),                        /* tp_itemsize */
+    (destructor)type_dealloc,                   /* tp_dealloc */
+    0,                                          /* tp_print */
+    0,                                          /* tp_getattr */
+    0,                                          /* tp_setattr */
+    0,                                          /* tp_reserved */
+    (reprfunc)type_repr,                        /* tp_repr */
+    0,                                          /* tp_as_number */
+    0,                                          /* tp_as_sequence */
+    0,                                          /* tp_as_mapping */
+    0,                                          /* tp_hash */
+    (ternaryfunc)type_call,                     /* tp_call */
+    0,                                          /* tp_str */
+    (getattrofunc)type_getattro,                /* tp_getattro */
+    (setattrofunc)type_setattro,                /* tp_setattro */
+    0,                                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
+        Py_TPFLAGS_BASETYPE | Py_TPFLAGS_TYPE_SUBCLASS,         /* tp_flags */
+    type_doc,                                   /* tp_doc */
+    (traverseproc)type_traverse,                /* tp_traverse */
+    (inquiry)type_clear,                        /* tp_clear */
+    0,                                          /* tp_richcompare */
+    offsetof(PyTypeObject, tp_weaklist),        /* tp_weaklistoffset */
+    0,                                          /* tp_iter */
+    0,                                          /* tp_iternext */
+    type_methods,                               /* tp_methods */
+    type_members,                               /* tp_members */
+    type_getsets,                               /* tp_getset */
+    0,                                          /* tp_base */
+    0,                                          /* tp_dict */
+    0,                                          /* tp_descr_get */
+    0,                                          /* tp_descr_set */
+    offsetof(PyTypeObject, tp_dict),            /* tp_dictoffset */
+    type_init,                                  /* tp_init */
+    0,                                          /* tp_alloc */
+    type_new,                                   /* tp_new */
+    PyObject_GC_Del,                            /* tp_free */
+    (inquiry)type_is_gc,                        /* tp_is_gc */
+};
+```
 ### PyLongObject
 ### PyBytesObject/PyUnicodeObject
 ### PyListObject
